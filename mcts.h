@@ -29,9 +29,9 @@
   // Returns a value in {0, 0.5, 1}.
   // This should not be an evaluation function, because it will only be
   // called for finished games. Return 0.5 to indicate a draw.
-  double get_result(int current_player_to_move) const;
+  double get_result(int current_team_to_move) const;
 
-  int player_to_move;
+  int team_to_move;
 
   // ...
   private:
@@ -140,7 +140,7 @@ namespace MCTS
 
       const Move move;
       Node* const parent;
-      const int player_to_move;
+      const int team_to_move;
 
       //std::atomic<double> wins;
       //std::atomic<int> visits;
@@ -170,7 +170,7 @@ namespace MCTS
       Node<State>::Node(const State& state) :
    move(State::no_move),
       parent(nullptr),
-      player_to_move(state.player_to_move),
+      team_to_move(state.team_to_move),
       wins(0),
       visits(0),
       moves(state.get_moves()),
@@ -181,7 +181,7 @@ namespace MCTS
       Node<State>::Node(const State& state, const Move& move_, Node* parent_) :
    move(move_),
       parent(parent_),
-      player_to_move(state.player_to_move),
+      team_to_move(state.team_to_move),
       wins(0),
       visits(0),
       moves(state.get_moves()),
@@ -263,7 +263,7 @@ namespace MCTS
    {
       std::stringstream sout;
       sout << "["
-           << "P" << 3 - player_to_move << " "
+           << "P" << 3 - team_to_move << " "
            << "M:" << move << " "
            << "W/V: " << wins << "/" << visits << " "
            << "U: " << moves.size() << "]\n";
@@ -312,7 +312,7 @@ namespace MCTS
 #endif
       }
       // Will support more players later.
-      attest(root_state.player_to_move == 1 || root_state.player_to_move == 2);
+      attest(root_state.team_to_move == 1 || root_state.team_to_move == 2);
       auto root = std::unique_ptr<Node<State>>(new Node<State>(root_state));
 
 #ifdef USE_OPENMP
@@ -346,7 +346,7 @@ namespace MCTS
          // We have now reached a final state. Backpropagate the result
          // up the tree to the root node.
          while (node != nullptr) {
-            node->update(state.get_result(node->player_to_move));
+            node->update(state.get_result(node->team_to_move));
             node = node->parent;
          }
 
@@ -375,7 +375,7 @@ namespace MCTS
       using namespace std;
 
       // Will support more players later.
-      attest(root_state.player_to_move == 1 || root_state.player_to_move == 2);
+      attest(root_state.team_to_move == 1 || root_state.team_to_move == 2);
 
       auto moves = root_state.get_moves();
       attest(moves.size() > 0);
@@ -429,7 +429,7 @@ namespace MCTS
          }
 
          if (options.verbose) {
-            cerr << "Move: " << itr.first
+            cerr << "Move: " << itr.first->print()
                  << " (" << setw(2) << right << int(100.0 * itr.second / double(games_played) + 0.5) << "% visits)"
                  << " (" << setw(2) << right << int(100.0 * wins[itr.first] / best_visits  + 0.5)    << "% wins)" << endl;
          }
@@ -438,7 +438,7 @@ namespace MCTS
       if (options.verbose) {
          double best_wins = wins[best_move];
          cerr << "----" << endl;
-         cerr << "Best: " << best_move
+         cerr << "Best: " << best_move->print()
               << " (" << 100.0 * best_visits / double(games_played) << "% visits)"
               << " (" << 100.0 * best_wins / best_visits << "% wins)" << endl;
       }
@@ -457,31 +457,6 @@ namespace MCTS
 
 /////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////
-
-
-   void check(bool expr, const char* message)
-   {
-      if (!expr) {
-         throw std::invalid_argument(message);
-      }
-   }
-
-   void assertion_failed(const char* expr, const char* file_cstr, int line)
-   {
-      using namespace std;
-
-      // Extract the file name only.
-      string file(file_cstr);
-      auto pos = file.find_last_of("/\\");
-      if (pos == string::npos) {
-         pos = 0;
-      }
-      file = file.substr(pos + 1);  // Returns empty string if pos + 1 == length.
-
-      stringstream sout;
-      sout << "Assertion failed: " << expr << " in " << file << ":" << line << ".";
-      throw runtime_error(sout.str().c_str());
-   }
 
 }
 
